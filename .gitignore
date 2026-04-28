@@ -1,0 +1,31 @@
+# Local environment values
+config/cyclecloud.env
+
+# Terraform local working files
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfplan
+infra/tfplan
+crash.log
+crash.*.log
+
+# Override files
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Keep lock file tracked
+!infra/.terraform.lock.hcl
+
+# Logs and generated diagnostics
+logs/
+*.log
+*.jsonl
+
+# Python cache
+__pycache__/
+*.py[cod]
