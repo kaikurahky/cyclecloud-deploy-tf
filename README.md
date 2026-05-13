@@ -1,6 +1,6 @@
 # Azure CycleCloud + Slurm Terraform Lab
 
-このディレクトリは、Zenn 記事「Azure CycleCloud で Slurm クラスタを展開/活用」で作成している Azure 基盤部分を、Terraform とシェルスクリプトで一括展開するための作業セットです。自動化の対象は記事の「CycleCloud サーバの初期設定」の直前までです。
+このレポジトリは、Zenn 記事「Azure CycleCloud で Slurm クラスタを展開/活用」(https://zenn.dev/kaikurahky/articles/5252f707f38e2f) で作成している Azure 基盤部分を、Terraform とシェルスクリプトで一括展開するための作業セットです。自動化の対象は記事の「CycleCloud サーバの初期設定」の直前までです。
 
 ## 何を自動化するか
 
