@@ -29,7 +29,7 @@ export_if_unset() {
   local target_name="$1"
   local source_name="$2"
 
-  if [[ -z "${!target_name:-}" && -n "${!source_name:-}" ]]; then
+  if [[ -n "${!source_name:-}" ]]; then
     export "$target_name=${!source_name}"
   fi
 }
@@ -63,6 +63,12 @@ load_env_file() {
   export_if_unset TF_VAR_subnet_cluster_name SUBNET_CLUSTER_NAME
   export_if_unset TF_VAR_subnet_cluster_cidr SUBNET_CLUSTER_RANGE
   export_if_unset TF_VAR_nsg_cluster_name NSG_CLUSTER_NAME
+  export_if_unset TF_VAR_subnet_cluster_name SUBNET_CLUSTER01_NAME
+  export_if_unset TF_VAR_subnet_cluster_cidr SUBNET_CLUSTER01_RANGE
+  export_if_unset TF_VAR_nsg_cluster_name NSG_CLUSTER01_NAME
+  export_if_unset TF_VAR_subnet_misc_name SUBNET_MISC_NAME
+  export_if_unset TF_VAR_subnet_misc_cidr SUBNET_MISC_RANGE
+  export_if_unset TF_VAR_nsg_misc_name NSG_MISC_NAME
   export_if_unset TF_VAR_subnet_anf_name SUBNET_ANF_NAME
   export_if_unset TF_VAR_subnet_anf_cidr SUBNET_ANF_RANGE
   export_if_unset TF_VAR_nsg_anf_name NSG_ANF_NAME
@@ -118,6 +124,9 @@ load_env_file() {
   require_env_value TF_VAR_subnet_cluster_name
   require_env_value TF_VAR_subnet_cluster_cidr
   require_env_value TF_VAR_nsg_cluster_name
+  require_env_value TF_VAR_subnet_misc_name
+  require_env_value TF_VAR_subnet_misc_cidr
+  require_env_value TF_VAR_nsg_misc_name
   require_env_value TF_VAR_subnet_anf_name
   require_env_value TF_VAR_subnet_anf_cidr
   require_env_value TF_VAR_nsg_anf_name

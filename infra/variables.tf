@@ -45,7 +45,7 @@ variable "nsg_mngt_name" {
 
 variable "subnet_cluster_name" {
   type        = string
-  description = "Subnet name used by CycleCloud and cluster resources."
+  description = "Subnet name used by cluster resources."
 }
 
 variable "subnet_cluster_cidr" {
@@ -56,6 +56,21 @@ variable "subnet_cluster_cidr" {
 variable "nsg_cluster_name" {
   type        = string
   description = "Network security group name for the cluster subnet."
+}
+
+variable "subnet_misc_name" {
+  type        = string
+  description = "Miscellaneous subnet name."
+}
+
+variable "subnet_misc_cidr" {
+  type        = string
+  description = "CIDR block for the miscellaneous subnet."
+}
+
+variable "nsg_misc_name" {
+  type        = string
+  description = "Network security group name for the miscellaneous subnet."
 }
 
 variable "subnet_anf_name" {

@@ -67,6 +67,13 @@ resource "azurerm_network_security_group" "cluster" {
   tags                = local.common_tags
 }
 
+resource "azurerm_network_security_group" "misc" {
+  name                = var.nsg_misc_name
+  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.this.name
+  tags                = local.common_tags
+}
+
 resource "azurerm_network_security_group" "anf" {
   name                = var.nsg_anf_name
   location            = azurerm_resource_group.this.location
@@ -135,6 +142,14 @@ resource "azurerm_subnet" "cluster" {
   private_endpoint_network_policies = "Disabled"
 }
 
+resource "azurerm_subnet" "misc" {
+  name                            = var.subnet_misc_name
+  resource_group_name             = azurerm_resource_group.this.name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [var.subnet_misc_cidr]
+  default_outbound_access_enabled = false
+}
+
 resource "azurerm_subnet" "anf" {
   name                            = var.subnet_anf_name
   resource_group_name             = azurerm_resource_group.this.name
@@ -171,6 +186,11 @@ resource "azurerm_subnet_network_security_group_association" "mngt" {
 resource "azurerm_subnet_network_security_group_association" "cluster" {
   subnet_id                 = azurerm_subnet.cluster.id
   network_security_group_id = azurerm_network_security_group.cluster.id
+}
+
+resource "azurerm_subnet_network_security_group_association" "misc" {
+  subnet_id                 = azurerm_subnet.misc.id
+  network_security_group_id = azurerm_network_security_group.misc.id
 }
 
 resource "azurerm_subnet_network_security_group_association" "anf" {
@@ -213,6 +233,11 @@ resource "azurerm_subnet_nat_gateway_association" "cluster" {
 
 resource "azurerm_subnet_nat_gateway_association" "mngt" {
   subnet_id      = azurerm_subnet.mngt.id
+  nat_gateway_id = azurerm_nat_gateway.this.id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "misc" {
+  subnet_id      = azurerm_subnet.misc.id
   nat_gateway_id = azurerm_nat_gateway.this.id
 }
 
