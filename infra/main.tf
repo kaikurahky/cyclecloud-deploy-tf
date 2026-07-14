@@ -1,7 +1,7 @@
 locals {
   image_parts = split(":", var.cyclecloud_image_urn)
 
-  cyclecloud_private_ip = cidrhost(var.subnet_cluster_cidr, var.cyclecloud_private_ip_host)
+  cyclecloud_private_ip = cidrhost(var.subnet_mngt_cidr, var.cyclecloud_private_ip_host)
 
   management_source_cidrs = [
     for cidr in split(",", var.management_source_cidrs_csv) : trimspace(cidr)
@@ -53,6 +53,13 @@ resource "azurerm_virtual_network" "this" {
   tags                = local.common_tags
 }
 
+resource "azurerm_network_security_group" "mngt" {
+  name                = var.nsg_mngt_name
+  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.this.name
+  tags                = local.common_tags
+}
+
 resource "azurerm_network_security_group" "cluster" {
   name                = var.nsg_cluster_name
   location            = azurerm_resource_group.this.location
@@ -67,7 +74,14 @@ resource "azurerm_network_security_group" "anf" {
   tags                = local.common_tags
 }
 
-resource "azurerm_network_security_rule" "cluster_ssh" {
+resource "azurerm_network_security_group" "amlfs" {
+  name                = var.nsg_amlfs_name
+  location            = azurerm_resource_group.this.location
+  resource_group_name = azurerm_resource_group.this.name
+  tags                = local.common_tags
+}
+
+resource "azurerm_network_security_rule" "mngt_ssh" {
   for_each = {
     for index, cidr in local.management_source_cidrs : tostring(index) => cidr
   }
@@ -82,10 +96,10 @@ resource "azurerm_network_security_rule" "cluster_ssh" {
   source_address_prefix       = each.value
   destination_address_prefix  = "*"
   resource_group_name         = azurerm_resource_group.this.name
-  network_security_group_name = azurerm_network_security_group.cluster.name
+  network_security_group_name = azurerm_network_security_group.mngt.name
 }
 
-resource "azurerm_network_security_rule" "cluster_https_admin" {
+resource "azurerm_network_security_rule" "mngt_https_admin" {
   for_each = {
     for index, cidr in local.management_source_cidrs : tostring(index) => cidr
   }
@@ -100,7 +114,16 @@ resource "azurerm_network_security_rule" "cluster_https_admin" {
   source_address_prefix       = each.value
   destination_address_prefix  = "*"
   resource_group_name         = azurerm_resource_group.this.name
-  network_security_group_name = azurerm_network_security_group.cluster.name
+  network_security_group_name = azurerm_network_security_group.mngt.name
+}
+
+resource "azurerm_subnet" "mngt" {
+  name                              = var.subnet_mngt_name
+  resource_group_name               = azurerm_resource_group.this.name
+  virtual_network_name              = azurerm_virtual_network.this.name
+  address_prefixes                  = [var.subnet_mngt_cidr]
+  default_outbound_access_enabled   = false
+  private_endpoint_network_policies = "Disabled"
 }
 
 resource "azurerm_subnet" "cluster" {
@@ -132,6 +155,19 @@ resource "azurerm_subnet" "anf" {
   }
 }
 
+resource "azurerm_subnet" "amlfs" {
+  name                            = var.subnet_amlfs_name
+  resource_group_name             = azurerm_resource_group.this.name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [var.subnet_amlfs_cidr]
+  default_outbound_access_enabled = false
+}
+
+resource "azurerm_subnet_network_security_group_association" "mngt" {
+  subnet_id                 = azurerm_subnet.mngt.id
+  network_security_group_id = azurerm_network_security_group.mngt.id
+}
+
 resource "azurerm_subnet_network_security_group_association" "cluster" {
   subnet_id                 = azurerm_subnet.cluster.id
   network_security_group_id = azurerm_network_security_group.cluster.id
@@ -140,6 +176,11 @@ resource "azurerm_subnet_network_security_group_association" "cluster" {
 resource "azurerm_subnet_network_security_group_association" "anf" {
   subnet_id                 = azurerm_subnet.anf.id
   network_security_group_id = azurerm_network_security_group.anf.id
+}
+
+resource "azurerm_subnet_network_security_group_association" "amlfs" {
+  subnet_id                 = azurerm_subnet.amlfs.id
+  network_security_group_id = azurerm_network_security_group.amlfs.id
 }
 
 resource "azurerm_public_ip" "nat" {
@@ -170,8 +211,18 @@ resource "azurerm_subnet_nat_gateway_association" "cluster" {
   nat_gateway_id = azurerm_nat_gateway.this.id
 }
 
+resource "azurerm_subnet_nat_gateway_association" "mngt" {
+  subnet_id      = azurerm_subnet.mngt.id
+  nat_gateway_id = azurerm_nat_gateway.this.id
+}
+
 resource "azurerm_subnet_nat_gateway_association" "anf" {
   subnet_id      = azurerm_subnet.anf.id
+  nat_gateway_id = azurerm_nat_gateway.this.id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "amlfs" {
+  subnet_id      = azurerm_subnet.amlfs.id
   nat_gateway_id = azurerm_nat_gateway.this.id
 }
 
@@ -213,7 +264,7 @@ resource "azurerm_private_endpoint" "storage_blob" {
   name                = var.private_endpoint_name
   location            = azurerm_resource_group.this.location
   resource_group_name = azurerm_resource_group.this.name
-  subnet_id           = azurerm_subnet.cluster.id
+  subnet_id           = azurerm_subnet.mngt.id
   tags                = local.common_tags
 
   private_service_connection {
@@ -289,7 +340,7 @@ resource "azurerm_network_interface" "cyclecloud" {
 
   ip_configuration {
     name                          = "ipconfig1"
-    subnet_id                     = azurerm_subnet.cluster.id
+    subnet_id                     = azurerm_subnet.mngt.id
     private_ip_address_allocation = "Static"
     private_ip_address            = local.cyclecloud_private_ip
   }
@@ -297,7 +348,7 @@ resource "azurerm_network_interface" "cyclecloud" {
 
 resource "azurerm_network_interface_security_group_association" "cyclecloud" {
   network_interface_id      = azurerm_network_interface.cyclecloud.id
-  network_security_group_id = azurerm_network_security_group.cluster.id
+  network_security_group_id = azurerm_network_security_group.mngt.id
 }
 
 resource "azurerm_resource_group_template_deployment" "cyclecloud_vm" {
@@ -306,36 +357,36 @@ resource "azurerm_resource_group_template_deployment" "cyclecloud_vm" {
   deployment_mode     = "Incremental"
 
   template_content = jsonencode({
-    "$schema" = "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
+    "$schema"      = "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
     contentVersion = "1.0.0.0"
     parameters = {
-      vmName = { type = "string" }
-      location = { type = "string" }
-      vmSize = { type = "string" }
-      adminUsername = { type = "string" }
-      sshPublicKey = { type = "secureString" }
-      nicId = { type = "string" }
+      vmName                 = { type = "string" }
+      location               = { type = "string" }
+      vmSize                 = { type = "string" }
+      adminUsername          = { type = "string" }
+      sshPublicKey           = { type = "secureString" }
+      nicId                  = { type = "string" }
       userAssignedIdentityId = { type = "string" }
-      planPublisher = { type = "string" }
-      planProduct = { type = "string" }
-      planName = { type = "string" }
-      imagePublisher = { type = "string" }
-      imageOffer = { type = "string" }
-      imageSku = { type = "string" }
-      imageVersion = { type = "string" }
-      tags = { type = "object" }
+      planPublisher          = { type = "string" }
+      planProduct            = { type = "string" }
+      planName               = { type = "string" }
+      imagePublisher         = { type = "string" }
+      imageOffer             = { type = "string" }
+      imageSku               = { type = "string" }
+      imageVersion           = { type = "string" }
+      tags                   = { type = "object" }
     }
     resources = [
       {
-        type = "Microsoft.Compute/virtualMachines"
+        type       = "Microsoft.Compute/virtualMachines"
         apiVersion = "2025-04-01"
-        name = "[parameters('vmName')]"
-        location = "[parameters('location')]"
-        tags = "[parameters('tags')]"
+        name       = "[parameters('vmName')]"
+        location   = "[parameters('location')]"
+        tags       = "[parameters('tags')]"
         plan = {
           publisher = "[parameters('planPublisher')]"
-          product = "[parameters('planProduct')]"
-          name = "[parameters('planName')]"
+          product   = "[parameters('planProduct')]"
+          name      = "[parameters('planName')]"
         }
         identity = {
           type = "UserAssigned"
@@ -350,25 +401,25 @@ resource "azurerm_resource_group_template_deployment" "cyclecloud_vm" {
           storageProfile = {
             imageReference = {
               publisher = "[parameters('imagePublisher')]"
-              offer = "[parameters('imageOffer')]"
-              sku = "[parameters('imageSku')]"
-              version = "[parameters('imageVersion')]"
+              offer     = "[parameters('imageOffer')]"
+              sku       = "[parameters('imageSku')]"
+              version   = "[parameters('imageVersion')]"
             }
             osDisk = {
-              name = "[format('{0}-osdisk', parameters('vmName'))]"
+              name         = "[format('{0}-osdisk', parameters('vmName'))]"
               createOption = "FromImage"
-              caching = "ReadWrite"
-              diskSizeGB = 128
+              caching      = "ReadWrite"
+              diskSizeGB   = 128
               managedDisk = {
                 storageAccountType = "Premium_LRS"
               }
             }
             dataDisks = [
               {
-                name = "[format('{0}-datadisk0', parameters('vmName'))]"
-                lun = 0
+                name         = "[format('{0}-datadisk0', parameters('vmName'))]"
+                lun          = 0
                 createOption = "FromImage"
-                caching = "ReadWrite"
+                caching      = "ReadWrite"
                 managedDisk = {
                   storageAccountType = "Premium_LRS"
                 }
@@ -386,14 +437,14 @@ resource "azurerm_resource_group_template_deployment" "cyclecloud_vm" {
             ]
           }
           osProfile = {
-            computerName = "[parameters('vmName')]"
+            computerName  = "[parameters('vmName')]"
             adminUsername = "[parameters('adminUsername')]"
             linuxConfiguration = {
               disablePasswordAuthentication = true
               ssh = {
                 publicKeys = [
                   {
-                    path = "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]"
+                    path    = "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]"
                     keyData = "[parameters('sshPublicKey')]"
                   }
                 ]
@@ -406,21 +457,21 @@ resource "azurerm_resource_group_template_deployment" "cyclecloud_vm" {
   })
 
   parameters_content = jsonencode({
-    vmName = { value = var.cyclecloud_vm_name }
-    location = { value = azurerm_resource_group.this.location }
-    vmSize = { value = var.cyclecloud_vm_size }
-    adminUsername = { value = var.cyclecloud_admin_username }
-    sshPublicKey = { value = var.cc_admin_ssh_public_key }
-    nicId = { value = azurerm_network_interface.cyclecloud.id }
+    vmName                 = { value = var.cyclecloud_vm_name }
+    location               = { value = azurerm_resource_group.this.location }
+    vmSize                 = { value = var.cyclecloud_vm_size }
+    adminUsername          = { value = var.cyclecloud_admin_username }
+    sshPublicKey           = { value = var.cc_admin_ssh_public_key }
+    nicId                  = { value = azurerm_network_interface.cyclecloud.id }
     userAssignedIdentityId = { value = azurerm_user_assigned_identity.cyclecloud.id }
-    planPublisher = { value = local.image_parts[0] }
-    planProduct = { value = local.image_parts[1] }
-    planName = { value = local.image_parts[2] }
-    imagePublisher = { value = local.image_parts[0] }
-    imageOffer = { value = local.image_parts[1] }
-    imageSku = { value = local.image_parts[2] }
-    imageVersion = { value = local.image_parts[3] }
-    tags = { value = local.common_tags }
+    planPublisher          = { value = local.image_parts[0] }
+    planProduct            = { value = local.image_parts[1] }
+    planName               = { value = local.image_parts[2] }
+    imagePublisher         = { value = local.image_parts[0] }
+    imageOffer             = { value = local.image_parts[1] }
+    imageSku               = { value = local.image_parts[2] }
+    imageVersion           = { value = local.image_parts[3] }
+    tags                   = { value = local.common_tags }
   })
 
   depends_on = [

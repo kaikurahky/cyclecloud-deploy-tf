@@ -28,6 +28,21 @@ variable "vnet_cidr" {
   description = "Address space for the virtual network."
 }
 
+variable "subnet_mngt_name" {
+  type        = string
+  description = "Management subnet name used by the CycleCloud server."
+}
+
+variable "subnet_mngt_cidr" {
+  type        = string
+  description = "CIDR block for the management subnet."
+}
+
+variable "nsg_mngt_name" {
+  type        = string
+  description = "Network security group name for the management subnet."
+}
+
 variable "subnet_cluster_name" {
   type        = string
   description = "Subnet name used by CycleCloud and cluster resources."
@@ -56,6 +71,21 @@ variable "subnet_anf_cidr" {
 variable "nsg_anf_name" {
   type        = string
   description = "Network security group name for the ANF subnet."
+}
+
+variable "subnet_amlfs_name" {
+  type        = string
+  description = "Subnet name reserved for Azure Managed Lustre File System."
+}
+
+variable "subnet_amlfs_cidr" {
+  type        = string
+  description = "CIDR block for the AMLFS subnet."
+}
+
+variable "nsg_amlfs_name" {
+  type        = string
+  description = "Network security group name for the AMLFS subnet."
 }
 
 variable "nat_gateway_name" {
@@ -187,7 +217,7 @@ variable "cc_admin_ssh_public_key" {
 
 variable "cyclecloud_private_ip_host" {
   type        = number
-  description = "Host number inside the cluster subnet used for the CycleCloud VM private IP."
+  description = "Host number inside the management subnet used for the CycleCloud VM private IP."
   default     = 10
 }
 

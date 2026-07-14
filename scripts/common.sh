@@ -57,12 +57,18 @@ load_env_file() {
   export_if_unset TF_VAR_managed_identity_name MANAGED_ID
   export_if_unset TF_VAR_vnet_name VNET_NAME
   export_if_unset TF_VAR_vnet_cidr VNET_RANGE
+  export_if_unset TF_VAR_subnet_mngt_name SUBNET_MNGT_NAME
+  export_if_unset TF_VAR_subnet_mngt_cidr SUBNET_MNGT_RANGE
+  export_if_unset TF_VAR_nsg_mngt_name NSG_MNGT_NAME
   export_if_unset TF_VAR_subnet_cluster_name SUBNET_CLUSTER_NAME
   export_if_unset TF_VAR_subnet_cluster_cidr SUBNET_CLUSTER_RANGE
   export_if_unset TF_VAR_nsg_cluster_name NSG_CLUSTER_NAME
   export_if_unset TF_VAR_subnet_anf_name SUBNET_ANF_NAME
   export_if_unset TF_VAR_subnet_anf_cidr SUBNET_ANF_RANGE
   export_if_unset TF_VAR_nsg_anf_name NSG_ANF_NAME
+  export_if_unset TF_VAR_subnet_amlfs_name SUBNET_AMLFS_NAME
+  export_if_unset TF_VAR_subnet_amlfs_cidr SUBNET_AMLFS_RANGE
+  export_if_unset TF_VAR_nsg_amlfs_name NSG_AMLFS_NAME
   export_if_unset TF_VAR_nat_gateway_name NATGW_NAME
   export_if_unset TF_VAR_nat_public_ip_name NATGW_PIP
   export_if_unset TF_VAR_storage_account_name STGACCT_CC
@@ -106,12 +112,18 @@ load_env_file() {
   require_env_value TF_VAR_managed_identity_name
   require_env_value TF_VAR_vnet_name
   require_env_value TF_VAR_vnet_cidr
+  require_env_value TF_VAR_subnet_mngt_name
+  require_env_value TF_VAR_subnet_mngt_cidr
+  require_env_value TF_VAR_nsg_mngt_name
   require_env_value TF_VAR_subnet_cluster_name
   require_env_value TF_VAR_subnet_cluster_cidr
   require_env_value TF_VAR_nsg_cluster_name
   require_env_value TF_VAR_subnet_anf_name
   require_env_value TF_VAR_subnet_anf_cidr
   require_env_value TF_VAR_nsg_anf_name
+  require_env_value TF_VAR_subnet_amlfs_name
+  require_env_value TF_VAR_subnet_amlfs_cidr
+  require_env_value TF_VAR_nsg_amlfs_name
   require_env_value TF_VAR_nat_gateway_name
   require_env_value TF_VAR_nat_public_ip_name
   require_env_value TF_VAR_storage_account_name
