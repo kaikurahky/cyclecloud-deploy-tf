@@ -29,3 +29,6 @@ logs/
 # Python cache
 __pycache__/
 *.py[cod]
+
+# Archived local Terraform state
+infra/state-backup-*/

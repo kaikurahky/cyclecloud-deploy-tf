@@ -7,6 +7,47 @@ source "$SCRIPT_DIR/common.sh"
 
 prepare_context "${1:-}"
 
+archive_stale_state() {
+	local state_file="$INFRA_DIR/terraform.tfstate"
+	local backup_file="$INFRA_DIR/terraform.tfstate.backup"
+	local plan_file="$INFRA_DIR/tfplan"
+	local stale_subscription_ids
+	local archive_dir
+
+	if [[ ! -f "$state_file" ]]; then
+		return
+	fi
+
+	stale_subscription_ids=$(
+		{
+			grep -Eoh '/subscriptions/[0-9a-fA-F-]{36}' "$state_file" 2>/dev/null | sed 's#.*/subscriptions/##' || true
+			grep -Eoh '"subscription_id"[[:space:]]*:[[:space:]]*"[0-9a-fA-F-]{36}"' "$state_file" 2>/dev/null | sed -E 's/.*"([0-9a-fA-F-]{36})"/\1/' || true
+		} | sort -u | grep -Fvx "$TF_VAR_subscription_id" || true
+	)
+
+	if [[ -z "$stale_subscription_ids" ]]; then
+		return
+	fi
+
+	archive_dir="$INFRA_DIR/state-backup-$(date +%Y%m%d-%H%M%S)"
+	mkdir -p "$archive_dir"
+
+	echo "Detected Terraform state for a different subscription:"
+	printf '  %s\n' $stale_subscription_ids
+	echo "Current subscription: $TF_VAR_subscription_id"
+	echo "Archiving stale Terraform state to: $archive_dir"
+
+	mv "$state_file" "$archive_dir/"
+	if [[ -f "$backup_file" ]]; then
+		mv "$backup_file" "$archive_dir/"
+	fi
+	if [[ -f "$plan_file" ]]; then
+		mv "$plan_file" "$archive_dir/"
+	fi
+}
+
+archive_stale_state
+
 IMAGE_PUBLISHER=${TF_VAR_cyclecloud_image_urn%%:*}
 IMAGE_REMAINDER=${TF_VAR_cyclecloud_image_urn#*:}
 IMAGE_OFFER=${IMAGE_REMAINDER%%:*}

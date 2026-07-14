@@ -1,1 +1,1 @@
-/home/hikurais/tunneling/az_login.sh
+/home/hikurais/azure_iac/tunneling/az_login.sh
